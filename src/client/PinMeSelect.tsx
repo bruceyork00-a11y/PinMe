@@ -13,7 +13,7 @@ import clsx from 'clsx'
 import { FavoriteTags } from './FavoriteTags.js'
 import { HeartButton } from './HeartButton.js'
 import { isFavorited, toggleFavorite } from './storage.js'
-import styles from './styles.module.css'
+import styles from './styles.js'
 
 export interface ModelReasoningEffort {
   id: string

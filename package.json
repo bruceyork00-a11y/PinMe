@@ -12,12 +12,17 @@
     },
     "./client": {
       "types": "./lib/client/index.d.ts",
-      "default": "./lib/client/index.js"
+      "default": "./lib/client.js"
     }
   },
   "dsh": {
     "client": {
-      "platform": "web"
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-model-selection",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ]
     }
   },
   "keywords": [
@@ -36,8 +41,8 @@
     "url": "git+https://github.com/bruceyork00-a11y/PinMe.git"
   },
   "scripts": {
-    "build": "tsc && node -e \"require('fs').copyFileSync('src/client/styles.module.css', 'lib/client/styles.module.css')\"",
-    "dev": "tsc -w"
+    "build": "node build.js",
+    "dev": "node build.js --watch"
   },
   "dependencies": {
     "clsx": "^2.1.1"
@@ -52,6 +57,7 @@
   "devDependencies": {
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
+    "esbuild": "^0.25.0",
     "typescript": "^5.7.3"
   }
 }

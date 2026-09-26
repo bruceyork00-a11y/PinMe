@@ -1,6 +1,6 @@
 import React from 'react'
 import clsx from 'clsx'
-import css from './styles.module.css'
+import css from './styles.js'
 
 interface HeartButtonProps {
   favorited: boolean

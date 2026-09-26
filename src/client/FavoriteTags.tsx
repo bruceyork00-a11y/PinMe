@@ -2,7 +2,7 @@ import React from 'react'
 import clsx from 'clsx'
 import { useFavorites, removeFavorite } from './storage.js'
 import type { ModelFavorite } from './types.js'
-import css from './styles.module.css'
+import css from './styles.js'
 
 interface FavoriteTagsProps {
   currentProvider?: string
