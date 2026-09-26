@@ -217,6 +217,12 @@ export function PinMeSelect({
   const modelLabel = currentChoice?.model.name ??
     (state.current === null ? 'Select Model' : `${state.current.provider}/${state.current.model}`)
 
+  // Header shortcut pin for the exact combination that is currently active.
+  const currentModelName = currentChoice?.model.name ?? state.current?.model ?? ''
+  const currentEffortLabel = effortLabel ?? providerDefaultLabel
+  const currentFavorited = state.current !== null &&
+    isFavorited(state.current.provider, state.current.model, effectiveEffort)
+
   if (!available) return null
 
   return (
@@ -306,8 +312,30 @@ export function PinMeSelect({
             {/* PANE: ROOT */}
             {pane === 'root' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--vp-c-text-3, #94a3b8)', padding: '4px 8px' }}>
-                  Model Configuration
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 4px 2px 8px', minHeight: '24px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--vp-c-text-3, #94a3b8)' }}>
+                    Model Configuration
+                  </span>
+                  {state.current !== null && (
+                    <HeartButton
+                      size={14}
+                      favorited={currentFavorited}
+                      title={currentFavorited
+                        ? `取消收藏当前组合 ${currentModelName} (${currentEffortLabel})`
+                        : `收藏当前组合 ${currentModelName} (${currentEffortLabel})`}
+                      onToggle={() => {
+                        if (state.current === null) return
+                        toggleFavorite({
+                          provider: state.current.provider,
+                          model: state.current.model,
+                          modelName: currentModelName,
+                          reasoningEffort: effectiveEffort,
+                          effortLabel: currentEffortLabel,
+                          shortLabel: `${shortenName(currentModelName)} · ${currentEffortLabel}`,
+                        })
+                      }}
+                    />
+                  )}
                 </div>
                 <button
                   type="button"
