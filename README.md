@@ -5,6 +5,7 @@
 一键收藏常用的「模型 + 思考强度」组合（如 `Gemini 3.8 Flash High`、`Claude Sonnet Thinking Medium`），并将它们直接展示在输入栏下方作为快捷药丸标签（Pills），实现**单次点击瞬间直达**，彻底告别繁琐的多级菜单操作！
 
 ---
+<img width="1947" height="258" alt="image" src="https://github.com/user-attachments/assets/4f33798f-f63f-45a5-b1b7-b164046e5c55" />
 
 ## ✨ 核心特性
 
