@@ -100,7 +100,7 @@ export function PinMeSelect({
   const id = useId()
 
   const groups = useMemo(() => {
-    return (state.groups || []).toSorted((left, right) =>
+    return [...(state.groups || [])].sort((left, right) =>
       (left.id === 'deepseek-account' ? 0 : left.id === 'deepseek-official' ? 1 : 2) -
       (right.id === 'deepseek-account' ? 0 : right.id === 'deepseek-official' ? 1 : 2)
     )

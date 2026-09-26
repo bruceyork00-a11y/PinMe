@@ -10,7 +10,7 @@ export const name = 'pinme'
 export const inject = ['slots', 'modelDirectories', 'sessions']
 
 export function apply(ctx: any): void {
-  ctx.inject(['slots', 'modelDirectories'], (scope: any) => {
+  ctx.inject(['slots', 'modelDirectories', 'sessions'], (scope: any) => {
     const models = scope.modelDirectories
     const sessions = scope.sessions
 
@@ -22,7 +22,7 @@ export function apply(ctx: any): void {
           locale: 'model',
           inject: (sessionId: string) => {
             const directory = models.directoryFor(sessionId)
-            const available = sessions.subagentAddress(sessionId) === undefined
+            const available = sessions?.subagentAddress ? sessions.subagentAddress(sessionId) === undefined : true
             return {
               available,
               directory: directory.store,

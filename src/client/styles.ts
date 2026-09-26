@@ -136,7 +136,7 @@ const css = `
 
 if (typeof document !== 'undefined' && !document.querySelector('style[data-plugin="dsh-plugin-pinme"]')) {
   const style = document.createElement('style')
-  style.dataset.plugin = 'dsh-plugin-pinme'
+  style.setAttribute('data-plugin', 'dsh-plugin-pinme')
   style.textContent = css
   document.head.appendChild(style)
 }
