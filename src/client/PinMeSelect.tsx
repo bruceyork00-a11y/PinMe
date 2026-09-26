@@ -140,11 +140,17 @@ export function PinMeSelect({
       ? (typeof t === 'function' ? t('effort.providerDefault') : 'Default')
       : reasoning.efforts.find(level => level.id === effectiveEffort)?.name ?? effectiveEffort
 
+  const providerDefaultLabel = typeof t === 'function' ? t('effort.providerDefault') : 'Default'
+
   const effortChoices = useMemo<readonly EffortChoice[]>(() => {
-    if (reasoning === undefined) return []
+    if (reasoning === undefined) {
+      // No reasoning levels: expose the provider default as the single choice so
+      // this model is still pinnable (a favorite always carries an intensity).
+      return [{ key: 'provider-default', effort: undefined, label: providerDefaultLabel }]
+    }
     return [
       ...(reasoning.defaultEffort === undefined
-        ? [{ key: 'provider-default', effort: undefined, label: typeof t === 'function' ? t('effort.providerDefault') : 'Default' }]
+        ? [{ key: 'provider-default', effort: undefined, label: providerDefaultLabel }]
         : []),
       ...reasoning.efforts.map(effort => ({
         key: `effort:${effort.id}`,
@@ -152,7 +158,7 @@ export function PinMeSelect({
         label: effort.name,
       })),
     ]
-  }, [reasoning, t])
+  }, [reasoning, providerDefaultLabel])
 
   useEffect(() => {
     if (!open) return
@@ -329,7 +335,7 @@ export function PinMeSelect({
                   </div>
                 </button>
 
-                {reasoning !== undefined && (
+                {state.current !== null && (
                   <button
                     type="button"
                     onClick={() => setPane('effort')}
@@ -351,7 +357,7 @@ export function PinMeSelect({
                   >
                     <span style={{ fontWeight: 500 }}>Thinking Intensity</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', opacity: 0.75 }}>
-                      <span>{effortLabel}</span>
+                      <span>{effortLabel ?? providerDefaultLabel}</span>
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
                     </div>
                   </button>
@@ -389,7 +395,6 @@ export function PinMeSelect({
                     </div>
                     {group.models.map(model => {
                       const isSelected = state.current?.provider === group.id && state.current.model === model.id
-                      const isFav = isFavorited(group.id, model.id, model.reasoning?.defaultEffort)
 
                       return (
                         <div
@@ -421,21 +426,6 @@ export function PinMeSelect({
                               {model.name}
                             </span>
                           </div>
-
-                          {/* Heart Bookmark Button */}
-                          <HeartButton
-                            favorited={isFav}
-                            onToggle={() => {
-                              toggleFavorite({
-                                provider: group.id,
-                                model: model.id,
-                                modelName: model.name,
-                                reasoningEffort: model.reasoning?.defaultEffort,
-                                effortLabel: model.reasoning?.defaultEffort,
-                                shortLabel: shortenName(model.name),
-                              })
-                            }}
-                          />
                         </div>
                       )
                     })}
