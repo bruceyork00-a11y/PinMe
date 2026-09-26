@@ -1,7 +1,7 @@
 /**
  * PinMeSelect: Enhanced Model Selection Component for DeepSeek Harness.
  * - Adds FavoriteTags right next to the model trigger button (Image 1)
- * - Adds HeartButton to reasoning efforts & models for 1-click pinning (Image 2)
+ * - Adds HeartButton to the Thinking Intensity levels for 1-click pinning (Image 2)
  */
 
 import React, {
