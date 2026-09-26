@@ -1,10 +1,10 @@
 {
   "name": "dsh-plugin-pinme",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "description": "PinMe: Instant favorite presets & quick switch tags for DeepSeek Harness models and reasoning effort",
+  "type": "module",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
-  "type": "module",
   "exports": {
     ".": {
       "types": "./lib/index.d.ts",
@@ -15,7 +15,14 @@
       "default": "./lib/client.js"
     }
   },
+  "files": [
+    "lib",
+    "cordis.patch.yml"
+  ],
   "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
     "client": {
       "platform": "web",
       "inject": [
@@ -29,6 +36,7 @@
   "keywords": [
     "dsh",
     "dsh-plugin",
+    "dsh-bundle",
     "deepseek-harness",
     "model-selector",
     "favorites",
@@ -37,23 +45,18 @@
   ],
   "author": "bruceyork00-a11y",
   "license": "MIT",
+  "homepage": "https://github.com/bruceyork00-a11y/PinMe#readme",
+  "bugs": {
+    "url": "https://github.com/bruceyork00-a11y/PinMe/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/bruceyork00-a11y/PinMe.git"
   },
   "scripts": {
     "build": "node build.js",
-    "dev": "node build.js --watch"
-  },
-  "dependencies": {
-    "clsx": "^2.1.1"
-  },
-  "peerDependencies": {
-    "@deepseek-ai/cordis": "*",
-    "@deepseek-ai/dsh-client-ui-slots": "*",
-    "@deepseek-ai/dsh-client-ui-primitives": "*",
-    "react": ">=18.0.0",
-    "react-dom": ">=18.0.0"
+    "dev": "node build.js --watch",
+    "prepare": "node build.js"
   },
   "devDependencies": {
     "@types/react": "^18.3.18",

@@ -48,23 +48,60 @@
 
 ---
 
-## 🛠️ 安装与本地调试
+## 🛠️ 安装
 
-### 1. 安装依赖与编译
+PinMe 是一个标准 DSH **组合包（bundle）**，用 `dsh plugin` 装进 profile 即可，无需改 DSH 源码。
 
-在 `E:\PinMe` 目录下执行：
+### 方式一：从 npm 安装（无需构建授权，推荐）
+```bash
+dsh plugin --profile web add dsh-plugin-pinme
+```
+包内已带编译好的 `lib/`，安装即可用。
+
+### 方式二：从 GitHub 源码安装
+```bash
+dsh plugin --profile web add github:bruceyork00-a11y/PinMe#v0.1.3
+```
+pnpm ≥10 默认拒绝运行 git 依赖的构建脚本，首次会失败并在输出里给出授权键。把该键写进 profile 的 `pnpm-workspace.yaml` 后重试：
+```yaml
+# ~/.dsh/profiles/web/pnpm-workspace.yaml
+allowBuilds:
+  dsh-plugin-pinme: true
+```
+> 授权构建 = 允许该包代码在安装时于本机执行；请固定 commit/tag，只对可信源码授权。
+
+### 方式三：从 Release 产物（tarball）安装
+```bash
+dsh plugin --profile web add ./dsh-plugin-pinme-0.1.3.tgz
+```
+tarball 已含 `lib/`，同样不需要构建授权。
+
+安装后重启 DSH 即可，插件会自动出现（无需 `--patch`）。卸载：`dsh plugin --profile web remove dsh-plugin-pinme`。
+
+---
+
+## 🧑‍💻 本地开发调试
+
 ```bash
 npm install
 npm run build
 ```
-
-### 2. 在 DeepSeek Harness 中加载测试
-
-使用 DSH 提供的 `--patch` 参数挂载本地编译好的 `cordis.yml` 配置文件：
+用 `--patch` 直接挂载本地 `cordis.yml`（不写 profile）：
 ```bash
 pnpm dsh web --patch E:/PinMe/cordis.yml
 ```
-随后打开 `http://127.0.0.1:3080` 即可体验！
+随后打开 `http://127.0.0.1:3080` 即可体验。
+
+---
+
+## 📦 发布（维护者）
+
+```bash
+npm run build                 # 产出 lib/（prepare 也会在 npm pack/publish 时自动执行）
+npm pack                      # 生成 dsh-plugin-pinme-<version>.tgz，可挂到 GitHub Release
+npm publish                   # 发布到 npm（需已登录）
+git tag v0.1.3 && git push origin v0.1.3   # 打 tag，供 github:owner/repo#v0.1.3 安装
+```
 
 ---
 
@@ -72,9 +109,11 @@ pnpm dsh web --patch E:/PinMe/cordis.yml
 
 ```
 PinMe/
-├── package.json               # 声明 dsh.client 指向 lib/client.js
+├── package.json               # 声明 dsh.bundle（组合包层）与 dsh.client（浏览器半边）
+├── cordis.patch.yml           # 组合包层：向 profile 插入 PinMe 插件行
+├── cordis.yml                 # 本地 --patch 调试覆盖层
+├── build.js                   # tsc + esbuild 打包为 DSH ModuleLoader 格式
 ├── tsconfig.json              # TypeScript 编译配置
-├── cordis.yml                 # 本地调试覆盖层配置
 ├── src/
 │   ├── index.ts               # Host 进程（Cordis 模块声明）
 │   └── client/

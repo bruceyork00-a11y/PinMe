@@ -1,5 +1,9 @@
 import { build } from 'esbuild'
 import { execSync } from 'child_process'
+import { rmSync } from 'fs'
+
+console.log('[PinMe] Cleaning lib/...')
+rmSync('lib', { recursive: true, force: true })
 
 console.log('[PinMe] Running TypeScript compiler (tsc)...')
 execSync('npx tsc', { stdio: 'inherit' })

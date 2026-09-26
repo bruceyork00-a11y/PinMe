@@ -1,0 +1,10 @@
+# PinMe bundle layer.
+#
+# Applied when a DSH profile lists `dsh-plugin-pinme` in `dsh.profile.bundles`
+# (i.e. after `dsh plugin --profile <name> add dsh-plugin-pinme`).
+#
+# The row references the package by name so Node resolution finds the installed
+# code; the browser half is discovered through `dsh.client` in package.json.
+- insert:
+    - id: pinme
+      name: dsh-plugin-pinme

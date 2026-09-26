@@ -151,3 +151,26 @@
 - 头部心形初始为空心态，点击后变实心、标题变为「取消收藏当前组合 …」，同时收藏栏出现对应胶囊。
 - 打开「思考强度」二级菜单，对应档位心形同步为实心；再次点击头部心形取消后，胶囊消失、localStorage 归空。
 - 控制台无报错。
+
+---
+
+## 2026-09-26 | v0.1.3 打包为 DSH 组合包（bundle），支持 dsh plugin 安装
+
+### 1. 背景
+参考官方文档《打包与安装插件》，把 PinMe 从“本地 `--patch`”升级为标准可分发的**组合包**，让用户能 `dsh plugin add` 安装。
+
+### 2. 改动
+- `package.json`：
+  - 新增 `dsh.bundle.patch = ./cordis.patch.yml`（组合包层清单）。
+  - 新增 `files = ["lib", "cordis.patch.yml"]`；`main/exports` 保持不变（host=`lib/index.js`，client=`lib/client.js`）。
+  - 新增 `prepare = node build.js`，使 `github:` 源码安装也能自动构建出 `lib/`。
+  - 移除未使用的 `clsx` 依赖，移除会导致 pnpm 误装占位包的 `peerDependencies`（slots/primitives 在 npm 上是 0.0.1-rc 占位，真实实现内置在 DSH 安装目录）。
+- `cordis.patch.yml`：按**包名**插入插件行 `name: dsh-plugin-pinme`（区别于本地调试用的路径式 `cordis.yml`）。
+- `build.js`：构建前清理 `lib/`，避免残留已删除源文件的旧产物被打包。
+- README：新增 npm / GitHub 源码 / tarball 三种安装方式、发布流程、`allowBuilds` 说明。
+
+### 3. 验证
+- `npm pack` 产物 23 文件 / 19.1 kB，含 `cordis.patch.yml` 与 `lib/`。
+- 临时 profile 实装 tarball：`dsh plugin --profile pinmetest add ./dsh-plugin-pinme-0.1.3.tgz` 成功；
+  `dsh.profile.bundles = [@deepseek-ai/dsh-base, dsh-plugin-pinme]`，
+  `dsh --profile pinmetest --dump-config` 出现 `# == dsh-plugin-pinme` 层。
