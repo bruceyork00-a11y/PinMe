@@ -9,7 +9,7 @@ import React, {
   type CSSProperties, type KeyboardEvent, type FocusEvent,
 } from 'react'
 import { createPortal } from 'react-dom'
-import clsx from 'clsx'
+import { clsx } from './clsx.js'
 import { FavoriteTags } from './FavoriteTags.js'
 import { HeartButton } from './HeartButton.js'
 import { isFavorited, toggleFavorite } from './storage.js'

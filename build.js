@@ -15,7 +15,6 @@ await build({
     'react',
     'react-dom',
     'react/jsx-runtime',
-    'clsx',
     '@deepseek-ai/*',
   ],
   banner: {

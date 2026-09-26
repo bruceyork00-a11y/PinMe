@@ -1,5 +1,5 @@
 import React from 'react'
-import clsx from 'clsx'
+import { clsx } from './clsx.js'
 import { useFavorites, removeFavorite } from './storage.js'
 import type { ModelFavorite } from './types.js'
 import css from './styles.js'
