@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-pinme",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "PinMe: Instant favorite presets & quick switch tags for DeepSeek Harness models and reasoning effort",
   "type": "module",
   "main": "lib/index.js",

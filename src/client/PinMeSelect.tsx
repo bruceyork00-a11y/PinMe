@@ -1,11 +1,17 @@
 /**
- * PinMeSelect: Enhanced Model Selection Component for DeepSeek Harness.
- * - Adds FavoriteTags right next to the model trigger button (Image 1)
- * - Adds HeartButton to the Thinking Intensity levels for 1-click pinning (Image 2)
+ * PinMeSelect: the composer's model seat with favorite presets.
+ * - Renders the favorites bar next to the model trigger.
+ * - Keeps the native Model / Thinking Intensity drill-down and adds a heart to
+ *   each intensity level so a favorite always carries model + intensity.
+ *
+ * It replaces the single `conversation.input.model` seat, so it mirrors the
+ * native seat's interface (available/directory/load/select + t) and restores
+ * the keyboard affordances the native menu had (Escape to close, focus return,
+ * a visible error surface and a pending hint).
  */
 
 import React, {
-  useEffect, useId, useMemo, useRef, useState, useSyncExternalStore,
+  useEffect, useMemo, useRef, useState, useSyncExternalStore,
   type CSSProperties,
 } from 'react'
 import { createPortal } from 'react-dom'
@@ -64,6 +70,8 @@ export interface ModelSelectInjected {
 
 type Pane = 'root' | 'model' | 'effort'
 
+type Translate = (key: string, params?: Record<string, string>) => string
+
 interface EffortChoice {
   key: string
   effort: string | undefined
@@ -71,6 +79,8 @@ interface EffortChoice {
 }
 
 const MEASURE_STYLE: CSSProperties = { visibility: 'hidden', left: 0, top: 0 }
+
+const identity: Translate = (key) => key
 
 function shortenName(name: string): string {
   return name.replace(/^deepseek-ai\//i, '').replace(/^google\//i, '')
@@ -82,8 +92,8 @@ export function PinMeSelect({
   directory,
   load,
   select,
-  t = ((k: string) => k) as any,
-}: ModelSelectInjected & { locked: boolean; t?: any }) {
+  t = identity,
+}: ModelSelectInjected & { locked: boolean; t?: Translate }) {
   const state = useSyncExternalStore(
     fn => directory.subscribe(fn),
     () => directory.getSnapshot(),
@@ -91,12 +101,11 @@ export function PinMeSelect({
 
   const [open, setOpen] = useState(false)
   const [pane, setPane] = useState<Pane>('root')
-  const lastActionRef = useRef<'load' | 'select'>('load')
+  const [error, setError] = useState<string | null>(null)
   const rootRef = useRef<HTMLDivElement | null>(null)
   const triggerRef = useRef<HTMLButtonElement | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
   const [menuPos, setMenuPos] = useState<CSSProperties | null>(null)
-  const id = useId()
 
   // Reactive favorites so heart buttons flip immediately on click.
   const favorites = useFavorites()
@@ -134,13 +143,13 @@ export function PinMeSelect({
   const reasoning = currentChoice?.model.reasoning
   const effectiveEffort = state.current?.reasoningEffort ?? reasoning?.defaultEffort
 
+  const providerDefaultLabel = t('providerDefault')
+
   const effortLabel = reasoning === undefined
     ? undefined
     : effectiveEffort === undefined
-      ? (typeof t === 'function' ? t('effort.providerDefault') : 'Default')
+      ? providerDefaultLabel
       : reasoning.efforts.find(level => level.id === effectiveEffort)?.name ?? effectiveEffort
-
-  const providerDefaultLabel = typeof t === 'function' ? t('effort.providerDefault') : 'Default'
 
   const effortChoices = useMemo<readonly EffortChoice[]>(() => {
     if (reasoning === undefined) {
@@ -160,19 +169,32 @@ export function PinMeSelect({
     ]
   }, [reasoning, providerDefaultLabel])
 
+  const busy = state.status === 'selecting'
+
   useEffect(() => {
     if (!open) return
     const closeOutside = (event: MouseEvent): void => {
       if (rootRef.current?.contains(event.target as Node) === true) return
       if (menuRef.current?.contains(event.target as Node) === true) return
-      setOpen(false)
+      close(true)
+    }
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        close(true)
+      }
     }
     document.addEventListener('mousedown', closeOutside)
-    return () => { document.removeEventListener('mousedown', closeOutside) }
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', closeOutside)
+      document.removeEventListener('keydown', onKeyDown)
+    }
   }, [open])
 
   const openMenu = () => {
     if (locked) return
+    setError(null)
     setPane('root')
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect()
@@ -189,18 +211,38 @@ export function PinMeSelect({
     load()
   }
 
-  const close = () => {
+  const close = (restoreFocus = false) => {
     setOpen(false)
+    setPane('root')
+    if (restoreFocus) queueMicrotask(() => { triggerRef.current?.focus() })
   }
 
-  const submit = (selection: ModelSelection): void => {
-    lastActionRef.current = 'select'
-    void select(selection)
+  // One select path for the menu and the pills: a rejection is surfaced instead
+  // of closing silently (the native seat shows the same store error).
+  const submit = (selection: ModelSelection, after?: () => void): void => {
+    if (busy) return
+    setError(null)
+    let result: any
+    try {
+      result = select(selection)
+    } catch (err) {
+      setError(t('error', { message: err instanceof Error ? err.message : String(err) }))
+      return
+    }
+    Promise.resolve(result).then(
+      (ok) => {
+        if (ok === false) {
+          setError(t('error', { message: directory.getSnapshot().error ?? '' }))
+          return
+        }
+        after?.()
+      },
+      (err) => setError(t('error', { message: err instanceof Error ? err.message : String(err) })),
+    )
   }
 
   const choose = (selection: ModelSelection): void => {
-    submit(selection)
-    close()
+    submit(selection, () => close(true))
   }
 
   const chooseEffort = (effort: string | undefined): void => {
@@ -210,12 +252,25 @@ export function PinMeSelect({
       model: state.current.model,
       ...(effort === undefined ? {} : { reasoningEffort: effort }),
     }
-    submit(selection)
-    close()
+    submit(selection, () => close(true))
+  }
+
+  const modelRowKeyDown = (selection: ModelSelection) => (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      choose(selection)
+    }
+  }
+
+  const effortRowKeyDown = (effort: string | undefined) => (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      chooseEffort(effort)
+    }
   }
 
   const modelLabel = currentChoice?.model.name ??
-    (state.current === null ? 'Select Model' : `${state.current.provider}/${state.current.model}`)
+    (state.current === null ? t('selectModel') : `${state.current.provider}/${state.current.model}`)
 
   // Header shortcut pin for the exact combination that is currently active.
   const currentModelName = currentChoice?.model.name ?? state.current?.model ?? ''
@@ -233,10 +288,16 @@ export function PinMeSelect({
         currentModel={state.current?.model}
         currentEffort={effectiveEffort}
         disabled={locked}
+        t={t}
         onSelect={(selection) => {
           submit(selection)
         }}
       />
+
+      {/* Selection failure while the menu is closed (e.g. a pill click) */}
+      {error !== null && !open && (
+        <span className={styles.tagError} role="alert">{error}</span>
+      )}
 
       {/* 2. Primary Model Trigger */}
       <div ref={rootRef} style={{ position: 'relative', display: 'inline-flex' }}>
@@ -295,6 +356,9 @@ export function PinMeSelect({
         {open && typeof document !== 'undefined' && createPortal(
           <div
             ref={menuRef}
+            role="menu"
+            aria-label={t('header')}
+            aria-busy={busy}
             style={{
               ...(menuPos ?? MEASURE_STYLE),
               width: '260px',
@@ -314,15 +378,15 @@ export function PinMeSelect({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 4px 2px 8px', minHeight: '24px' }}>
                   <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--vp-c-text-3, #94a3b8)' }}>
-                    Model Configuration
+                    {t('header')}
                   </span>
                   {state.current !== null && (
                     <HeartButton
                       size={14}
                       favorited={currentFavorited}
                       title={currentFavorited
-                        ? `取消收藏当前组合 ${currentModelName} (${currentEffortLabel})`
-                        : `收藏当前组合 ${currentModelName} (${currentEffortLabel})`}
+                        ? t('unpinCurrent', { model: currentModelName, effort: currentEffortLabel })
+                        : t('pinCurrent', { model: currentModelName, effort: currentEffortLabel })}
                       onToggle={() => {
                         if (state.current === null) return
                         toggleFavorite({
@@ -339,6 +403,7 @@ export function PinMeSelect({
                 </div>
                 <button
                   type="button"
+                  role="menuitem"
                   onClick={() => setPane('model')}
                   style={{
                     display: 'flex',
@@ -356,7 +421,7 @@ export function PinMeSelect({
                   onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--vp-c-bg-mute, rgba(0,0,0,0.05))' }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
                 >
-                  <span style={{ fontWeight: 500 }}>Model</span>
+                  <span style={{ fontWeight: 500 }}>{t('model')}</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', opacity: 0.75 }}>
                     <span>{modelLabel}</span>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
@@ -366,6 +431,7 @@ export function PinMeSelect({
                 {state.current !== null && (
                   <button
                     type="button"
+                    role="menuitem"
                     onClick={() => setPane('effort')}
                     style={{
                       display: 'flex',
@@ -383,7 +449,7 @@ export function PinMeSelect({
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--vp-c-bg-mute, rgba(0,0,0,0.05))' }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
                   >
-                    <span style={{ fontWeight: 500 }}>Thinking Intensity</span>
+                    <span style={{ fontWeight: 500 }}>{t('effort')}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', opacity: 0.75 }}>
                       <span>{effortLabel ?? providerDefaultLabel}</span>
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
@@ -413,7 +479,7 @@ export function PinMeSelect({
                   }}
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
-                  Back
+                  {t('back')}
                 </button>
 
                 {groups.map(group => (
@@ -427,6 +493,8 @@ export function PinMeSelect({
                       return (
                         <div
                           key={model.id}
+                          role="menuitem"
+                          tabIndex={0}
                           style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -434,9 +502,10 @@ export function PinMeSelect({
                             padding: '6px 8px',
                             borderRadius: '6px',
                             background: isSelected ? 'var(--vp-c-brand-soft, rgba(2,132,199,0.1))' : 'transparent',
-                            cursor: 'pointer',
+                            cursor: busy ? 'default' : 'pointer',
                           }}
                           onClick={() => choose({ provider: group.id, model: model.id })}
+                          onKeyDown={modelRowKeyDown({ provider: group.id, model: model.id })}
                           onMouseEnter={(e) => {
                             if (!isSelected) e.currentTarget.style.background = 'var(--vp-c-bg-mute, rgba(0,0,0,0.04))'
                           }}
@@ -482,11 +551,11 @@ export function PinMeSelect({
                   }}
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
-                  Back
+                  {t('back')}
                 </button>
 
                 <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--vp-c-text-3, #94a3b8)', padding: '4px 8px' }}>
-                  Thinking Intensity
+                  {t('effort')}
                 </div>
 
                 {effortChoices.map(level => {
@@ -496,6 +565,8 @@ export function PinMeSelect({
                   return (
                     <div
                       key={level.key}
+                      role="menuitem"
+                      tabIndex={0}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -503,9 +574,10 @@ export function PinMeSelect({
                         padding: '7px 8px',
                         borderRadius: '6px',
                         background: isSelected ? 'var(--vp-c-brand-soft, rgba(2,132,199,0.1))' : 'transparent',
-                        cursor: 'pointer',
+                        cursor: busy ? 'default' : 'pointer',
                       }}
                       onClick={() => chooseEffort(level.effort)}
+                      onKeyDown={effortRowKeyDown(level.effort)}
                       onMouseEnter={(e) => {
                         if (!isSelected) e.currentTarget.style.background = 'var(--vp-c-bg-mute, rgba(0,0,0,0.04))'
                       }}
@@ -526,7 +598,9 @@ export function PinMeSelect({
                       {state.current && (
                         <HeartButton
                           favorited={isFav}
-                          title={isFav ? `取消收藏 ${modelLabel} (${level.label})` : `收藏 ${modelLabel} (${level.label}) 为快捷标签`}
+                          title={isFav
+                            ? t('unpinLevel', { model: modelLabel, effort: level.label })
+                            : t('pinLevel', { model: modelLabel, effort: level.label })}
                           onToggle={() => {
                             if (!state.current) return
                             toggleFavorite({
@@ -544,6 +618,11 @@ export function PinMeSelect({
                   )
                 })}
               </div>
+            )}
+
+            {busy && <div className={styles.menuStatus}>{t('pending')}</div>}
+            {error !== null && (
+              <div className={clsx(styles.menuStatus, styles.menuError)} role="alert">{error}</div>
             )}
           </div>,
           document.body

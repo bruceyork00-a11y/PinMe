@@ -4,12 +4,17 @@ import { useFavorites, removeFavorite } from './storage.js'
 import type { ModelFavorite } from './types.js'
 import css from './styles.js'
 
+type Translate = (key: string, params?: Record<string, string>) => string
+
+const identity: Translate = (key) => key
+
 interface FavoriteTagsProps {
   currentProvider?: string
   currentModel?: string
   currentEffort?: string
   disabled?: boolean
   onSelect: (selection: { provider: string; model: string; reasoningEffort?: string }) => void
+  t?: Translate
 }
 
 /**
@@ -23,10 +28,14 @@ export function FavoriteTags({
   currentEffort,
   disabled,
   onSelect,
+  t = identity,
 }: FavoriteTagsProps) {
   const favorites = useFavorites()
 
   if (favorites.length === 0) return null
+
+  const label = (fav: ModelFavorite) =>
+    `${fav.modelName}${fav.effortLabel ? ` · ${fav.effortLabel}` : ''}`
 
   const handleTagClick = (fav: ModelFavorite, e: React.MouseEvent) => {
     e.preventDefault()
@@ -45,7 +54,7 @@ export function FavoriteTags({
   }
 
   return (
-    <div className={css.tagContainer} role="toolbar" aria-label="收藏模型快捷标签">
+    <div className={css.tagContainer} role="toolbar" aria-label={t('tagsAria')}>
       {favorites.map((fav) => {
         const isActive =
           currentProvider === fav.provider &&
@@ -65,7 +74,7 @@ export function FavoriteTags({
             }}
             role="button"
             tabIndex={0}
-            title={`一键切换到: ${fav.modelName}${fav.effortLabel ? ` (${fav.effortLabel})` : ''}`}
+            title={t('switchTo', { model: fav.modelName, effort: fav.effortLabel ?? t('providerDefault') })}
           >
             <span className={css.tagDot} />
             <span className={css.tagText}>{fav.shortLabel}</span>
@@ -73,8 +82,8 @@ export function FavoriteTags({
               type="button"
               className={css.tagCloseBtn}
               onClick={(e) => handleRemove(fav.id, e)}
-              title="移除此快捷标签"
-              aria-label="移除此快捷标签"
+              title={t('removeTag')}
+              aria-label={t('removeTag')}
             >
               ×
             </button>

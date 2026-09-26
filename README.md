@@ -60,7 +60,7 @@ dsh plugin --profile web add dsh-plugin-pinme
 
 ### 方式二：从 GitHub 源码安装
 ```bash
-dsh plugin --profile web add github:bruceyork00-a11y/PinMe#v0.1.3
+dsh plugin --profile web add github:bruceyork00-a11y/PinMe#v0.1.4
 ```
 pnpm ≥10 默认拒绝运行 git 依赖的构建脚本，首次会失败并在输出里给出授权键。把该键写进 profile 的 `pnpm-workspace.yaml` 后重试：
 ```yaml
@@ -72,7 +72,7 @@ allowBuilds:
 
 ### 方式三：从 Release 产物（tarball）安装
 ```bash
-dsh plugin --profile web add ./dsh-plugin-pinme-0.1.3.tgz
+dsh plugin --profile web add ./dsh-plugin-pinme-0.1.4.tgz
 ```
 tarball 已含 `lib/`，同样不需要构建授权。
 
@@ -100,7 +100,7 @@ pnpm dsh web --patch E:/PinMe/cordis.yml
 npm run build                 # 产出 lib/（prepare 也会在 npm pack/publish 时自动执行）
 npm pack                      # 生成 dsh-plugin-pinme-<version>.tgz，可挂到 GitHub Release
 npm publish                   # 发布到 npm（需已登录）
-git tag v0.1.3 && git push origin v0.1.3   # 打 tag，供 github:owner/repo#v0.1.3 安装
+git tag v0.1.4 && git push origin v0.1.4   # 打 tag，供 github:owner/repo#v0.1.4 安装
 ```
 
 ---
@@ -122,6 +122,7 @@ PinMe/
 │       ├── FavoriteTags.tsx   # 快捷标签栏组件（空态隐藏）
 │       ├── HeartButton.tsx    # 心形收藏交互按钮
 │       ├── storage.ts         # LocalStorage 读写与响应式监听
+│       ├── locales.ts         # PinMe 自有 i18n 命名空间（zh / en）
 │       ├── types.ts           # 数据契约定义
 │       ├── clsx.ts            # 零依赖 classNames 组合器
 │       └── styles.ts          # 内联样式注入

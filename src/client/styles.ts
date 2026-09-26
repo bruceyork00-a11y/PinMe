@@ -132,13 +132,41 @@ const css = `
 .pinme-heart-favorited svg {
   fill: #ef4444 !important;
 }
+
+.pinme-menu-status {
+  padding: 6px 10px 2px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--vp-c-text-3, #94a3b8);
+}
+
+.pinme-menu-error {
+  color: #ef4444;
+}
+
+.pinme-tag-error {
+  font-size: 11px;
+  color: #ef4444;
+  white-space: nowrap;
+}
 `
 
-if (typeof document !== 'undefined' && !document.querySelector('style[data-plugin="dsh-plugin-pinme"]')) {
+/**
+ * Install the plugin stylesheet as a fiber-managed effect.
+ *
+ * Returns a disposer that removes the element the caller installed, so the
+ * stylesheet follows the plugin's lifecycle (per the DSH docs: anything
+ * registered through `ctx` is undone on unload).
+ */
+export function installStyles(): () => void {
+  if (typeof document === 'undefined') return () => {}
+  const existing = document.querySelector('style[data-plugin="dsh-plugin-pinme"]')
+  if (existing !== null) return () => {}
   const style = document.createElement('style')
   style.setAttribute('data-plugin', 'dsh-plugin-pinme')
   style.textContent = css
   document.head.appendChild(style)
+  return () => { style.remove() }
 }
 
 export const styles = {
@@ -151,6 +179,9 @@ export const styles = {
   tagCloseBtn: 'pinme-tag-close-btn',
   heartBtn: 'pinme-heart-btn',
   heartFavorited: 'pinme-heart-favorited',
+  menuStatus: 'pinme-menu-status',
+  menuError: 'pinme-menu-error',
+  tagError: 'pinme-tag-error',
 }
 
 export default styles

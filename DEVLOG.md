@@ -173,4 +173,38 @@
 - `npm pack` 产物 23 文件 / 19.1 kB，含 `cordis.patch.yml` 与 `lib/`。
 - 临时 profile 实装 tarball：`dsh plugin --profile pinmetest add ./dsh-plugin-pinme-0.1.3.tgz` 成功；
   `dsh.profile.bundles = [@deepseek-ai/dsh-base, dsh-plugin-pinme]`，
-  `dsh --profile pinmetest --dump-config` 出现 `# == dsh-plugin-pinme` 层。
+  `dsh --profile pinme-test --dump-config` 出现 `# == dsh-plugin-pinme` 层。
+
+---
+
+## 2026-09-26 | v0.1.4 按官方文档全量合规审查
+
+对照官方《打包与安装插件》《插件配置》《插件与生命周期》《服务与依赖》《事件系统》，以及参考页《Web Client Slots》《Client 模块》《存储》《Conversation 组装》《Web Client 架构》，逐条核对本插件。
+
+### 符合项（无需改动）
+- **插件形态**：host 半边导出 `name` / `apply`；`dsh.client` + `exports["./client"]` + `dsh.bundle.patch` 齐备；`files`/`prepare` 支持 `dsh plugin add` 与 `github:` 源码安装。
+- **依赖声明**：客户端 `inject = ['locale','sessions','slots','remote','remote.session']`，并在插槽 scope 内 `inject(['slots','modelDirectories','locale','sessions','remote','remote.session'])`，与内置 `ui-model-selection` 的服务要求对齐。
+- **不跨包导入**：未运行时导入其他功能插件的值，仅通过 `ctx` 服务与 Slots 交互。
+- **single slot 遮蔽**：`conversation.input.model` 是 single seat，官方允许作为「替换点」；priority -100 按「数值越小越先渲染」取胜。因官方禁止导入其他插件组件，遮蔽必然意味着重实现——这是本插件的固有取舍，已在下方记录。
+- **事件/生命周期**：无自建事件；注册均经 `ctx`/`slots.inject`，卸载可回收。
+
+### 发现并修复
+1. **未拥有自己的 i18n 命名空间**（违反「功能包拥有自己的字典」）：此前 `locale: 'model'` 借用 `ui-model-selection` 的命名空间，且大量 UI 文案硬编码为英文。
+   → 新增 `locales.ts`（zh/en），`locale: NS`，全部文案走 `t`。实测中文环境显示「模型设置 / 模型 / 推理等级 / 返回 / Default」。
+2. **全局副作用游离于 fiber 之外**（违反「经 ctx 注册之物随卸载回收」）：`styles.ts` 在模块顶层直接注入 `<style>`。
+   → 改为导出的 `installStyles()`，由 `scope.effect(() => installStyles(), 'pinme: stylesheet')` 管理，卸载即移除。
+3. **遮蔽后丢失原生菜单的可达性**：原生 seat 有 Escape 关闭、焦点回归、错误 Toast、pending 指示，PinMe 全无。
+   → 新增 Escape 关闭 + 焦点回归触发钮、`role="menu"/"menuitem"` + Enter/Space 激活、失败时经 `t('error')` 内联报错（菜单内或标签旁）、`aria-busy` + 「正在切换…」pending 提示。
+4. **死代码**：移除未使用的 `useId`、`lastActionRef`。
+
+### 记录未改（属当前 DSH 能力边界，非缺陷）
+- **客户端插件无法接收行配置**：`dsh.client` wire 与 `__DSH_BOOT__` entry 均不携带 `config`，故 PinMe 无法像 host 插件那样把「菜单宽度等可调参数」做成 `cordis.yml` 字段；host 半边亦无行为，故不导出 `Config`。
+- **持久化用 `localStorage`**：官方持久化 seam（`ctx.storage` / `ctx.storageDomain`）位于 host 侧；浏览器端偏好目前无对应类型化服务。收藏因此是「设备本地」，不跨设备同步。
+- **注入面沿用原生形状**：官方鼓励用注册项 `hooks` 暴露 observable，但内置 `ui-model-selection` 的同名 seat 仍是 `directory: {getSnapshot,subscribe}` + 组件内 `useSyncExternalStore`；PinMe 为与之兼容沿用同一形状。
+
+### 验证（DSH 0.1.7-rc.2 实机）
+- 菜单文案本地化；`role="menu"` 的 `aria-label` = 「模型设置」。
+- Effort 面板：返回 / 推理等级 / Off·Low·High·Max，档位心形标题本地化。
+- Escape 关闭并回焦触发钮（`document.activeElement === trigger`）。
+- 模型列表心形数 = 0（原生）；头部心形收藏当前组合 → 胶囊「DeepSeek-V41-Flash · High」；取消后归空。
+- 控制台零报错。
