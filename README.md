@@ -10,6 +10,7 @@
 
 - 🚀 **一键切换**：在输入框下方的模型选择器旁边直接展示已收藏的模型组合标签，点击即刻生效切换。
 - ❤️ **心形收藏**：在思考强度（Low / Medium / High）与模型列表中内置心形收藏按钮（♡ / ♥），随时自由增删预设。
+- 🧹 **极简空态**：没有收藏时不显示任何占位；收藏栏只在存在预设时出现（类似浏览器书签栏）。
 - 🔄 **会话实时同步**：深度兼容 DSH 的 `ModelDirectoryResolver` 和 `Session` 控制器，多会话切换状态无缝保持。
 - 💾 **本地持久化**：预设配置自动保存至浏览器 `localStorage`，跨窗口及多会话随时可用。
 - 🎨 **原生融合风格**：外观风格完全对齐 DSH 官方设计规范，适配深色与浅色主题，支持高亮联动与便捷删除（×）。
@@ -19,14 +20,14 @@
 ## 📸 交互效果图解
 
 ### 1. 快捷标签栏（输入框工具栏）
-在模型选择器右侧水平排布收藏胶囊标签：
+在模型选择器旁水平排布收藏胶囊标签（无收藏时整栏隐藏）：
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
 │ [输入框 Prompt Input ...]                                              │
 ├────────────────────────────────────────────────────────────────────────┤
-│ [+] [Gemini 3.8 Flash High ▾]  [⭐ 3.8 Flash High]  [Sonnet 4.6 Med]   │
+│ [⭐ 3.8 Flash High]  [Sonnet 4.6 Med]  [Gemini 3.8 Flash High ▾]        │
 └────────────────────────────────────────────────────────────────────────┘
-                                     ↑ 点击快捷标签直接切换模型+思考强度
+                        ↑ 点击快捷标签直接切换模型+思考强度（× 删除）
 ```
 
 ### 2. 心形收藏（下拉菜单钻取项）
@@ -67,7 +68,7 @@ pnpm dsh web --patch E:/PinMe/cordis.yml
 
 ```
 PinMe/
-├── package.json               # 声明 dsh.client 指向 lib/client/index.js
+├── package.json               # 声明 dsh.client 指向 lib/client.js
 ├── tsconfig.json              # TypeScript 编译配置
 ├── cordis.yml                 # 本地调试覆盖层配置
 ├── src/
@@ -75,11 +76,12 @@ PinMe/
 │   └── client/
 │       ├── index.ts           # Client 入口：注入 conversation.input.model 插槽
 │       ├── PinMeSelect.tsx    # 增强版模型选择器（整合心形收藏与快捷药丸）
-│       ├── FavoriteTags.tsx   # 快捷标签栏组件
+│       ├── FavoriteTags.tsx   # 快捷标签栏组件（空态隐藏）
 │       ├── HeartButton.tsx    # 心形收藏交互按钮
 │       ├── storage.ts         # LocalStorage 读写与响应式监听
 │       ├── types.ts           # 数据契约定义
-│       └── styles.module.css  # 胶囊标签与心形微交互样式
+│       ├── clsx.ts            # 零依赖 classNames 组合器
+│       └── styles.ts          # 内联样式注入
 └── README.md
 ```
 

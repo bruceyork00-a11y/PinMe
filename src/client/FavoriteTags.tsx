@@ -10,41 +10,23 @@ interface FavoriteTagsProps {
   currentEffort?: string
   disabled?: boolean
   onSelect: (selection: { provider: string; model: string; reasoningEffort?: string }) => void
-  onOpenMenu?: () => void
 }
 
+/**
+ * The favorites bar: one pill per pinned model+effort combination.
+ * Renders nothing while there are no favorites (bookmarks-bar semantics) —
+ * the model menu itself remains the single place to create them.
+ */
 export function FavoriteTags({
   currentProvider,
   currentModel,
   currentEffort,
   disabled,
   onSelect,
-  onOpenMenu,
 }: FavoriteTagsProps) {
   const favorites = useFavorites()
 
-  if (favorites.length === 0) {
-    return (
-      <div className={css.tagContainer} role="toolbar" aria-label="收藏模型快捷标签">
-        <div
-          className={css.tagPill}
-          style={{
-            borderStyle: 'dashed',
-            cursor: 'pointer',
-            opacity: 0.85,
-            borderColor: 'var(--vp-c-brand-soft, #38bdf8)',
-          }}
-          onClick={onOpenMenu}
-          title="点击打开菜单，点击心形图标 ♡ 即可收藏当前模型+思考强度"
-        >
-          <span style={{ color: '#ef4444', fontSize: '13px' }}>♡</span>
-          <span className={css.tagText} style={{ color: 'var(--vp-c-brand-1, #0284c7)' }}>
-            点击菜单 ♡ 收藏预设
-          </span>
-        </div>
-      </div>
-    )
-  }
+  if (favorites.length === 0) return null
 
   const handleTagClick = (fav: ModelFavorite, e: React.MouseEvent) => {
     e.preventDefault()
@@ -75,6 +57,12 @@ export function FavoriteTags({
             key={fav.id}
             className={clsx(css.tagPill, isActive && css.tagPillActive)}
             onClick={(e) => handleTagClick(fav, e)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                handleTagClick(fav, e as unknown as React.MouseEvent)
+              }
+            }}
             role="button"
             tabIndex={0}
             title={`一键切换到: ${fav.modelName}${fav.effortLabel ? ` (${fav.effortLabel})` : ''}`}
@@ -93,21 +81,6 @@ export function FavoriteTags({
           </div>
         )
       })}
-
-      {/* Quick Add '+' button */}
-      <div
-        className={css.tagPill}
-        style={{
-          padding: '0 6px',
-          opacity: 0.7,
-          cursor: 'pointer',
-          borderStyle: 'dashed',
-        }}
-        onClick={onOpenMenu}
-        title="打开菜单添加更多快捷模型"
-      >
-        <span style={{ fontWeight: 600 }}>+</span>
-      </div>
     </div>
   )
 }

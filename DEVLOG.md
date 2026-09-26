@@ -86,3 +86,32 @@
     - `cfa75bc`: fix: bundle client as DSH ModuleLoader factory format
     - `94a5e81`: fix: replace external clsx with zero-dependency inline helper
     - `0bae0db`: fix: set slot registration priority to -100 to shadow built-in model selector and add guide pill
+
+---
+
+## 2026-09-26 | v0.1.1 线上排障与交互精简
+
+### 1. 现象
+在真实 DSH 环境启动后模型选择器区域不可用：`conversation.input.model` 插槽条目崩溃，控制台报
+`Error: cannot get property "remote.session" without inject`。
+
+### 2. 根因一：注入依赖不完整（crashed slot）
+- `ModelDirectoryResolver.directoryFor()` 内部经由服务方法调用链需要调用方上下文具备 `remote` / `remote.session`。
+- 对比 DSH 内置 `@deepseek-ai/dsh-client-ui-model-selection` 的 `inject = ["commandUi","locale","sessions","slots","remote","remote.session"]`。
+- PinMe 之前只注入了 `slots` / `modelDirectories` / `sessions`，导致插槽条目的 inject face 一执行就抛错，整条目被错误边界吞掉，界面看不到插件。
+- **修复**：客户端入口的 `inject` 与 `ctx.inject([...])` 补齐 `locale` / `remote` / `remote.session`。`src/client/index.ts`
+
+### 3. 根因二：状态契约过期（菜单点不开）
+- PinMe 沿用了旧版契约 `busy = state.pending !== null`，但当前 store 快照根本没有 `pending` 字段（`undefined !== null` 恒为 `true`），于是 `show()` 永远提前返回，菜单点击无反应。
+- 当前真实契约：`status: 'idle' | 'loading' | 'ready' | 'error' | 'selecting'`，busy 判定为 `status === 'selecting'`；另有 `routable`，无 `pending` / `retainedEffort`。
+- **修复**：更新 `ModelDirectoryState` 类型，移除 `pending` / `retainedEffort`，重写 `busy` 判定并移除对打开菜单的错误阻断。`src/client/PinMeSelect.tsx`
+
+### 4. 交互精简（按产品反馈）
+- **取消空态占位**：没有收藏时 `FavoriteTags` 直接返回 `null`，不再常驻「点击菜单 ♡ 收藏预设」，也不再有 `+` 胶囊——对齐浏览器书签栏只展示已有书签的逻辑。
+- **心形实时联动**：`PinMeSelect` 通过 `useFavorites()` 订阅收藏集合，用 `Set<id>` 做 O(1) 判定；点击心形后实心状态立即翻转，不再依赖其它状态变更才刷新。
+- **键盘可达**：快捷胶囊补 `onKeyDown`（Enter / Space）。
+- **清理**：删除未被引用的 `styles.module.css` 与 `css.d.ts`（实际样式以 `styles.ts` 内联注入）。
+
+### 5. 验证
+- 在 DSH Web（`--patch E:/PinMe/cordis.yml`）实测：无收藏时收藏栏不渲染；心形收藏后胶囊即时出现并高亮当前项；`×` 删除后收藏栏消失；模型按钮打开菜单、选择模型/思考强度均正常。
+- 控制台无 `remote.session` / slot crash 报错。

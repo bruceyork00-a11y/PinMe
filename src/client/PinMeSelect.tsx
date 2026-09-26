@@ -12,7 +12,7 @@ import { createPortal } from 'react-dom'
 import { clsx } from './clsx.js'
 import { FavoriteTags } from './FavoriteTags.js'
 import { HeartButton } from './HeartButton.js'
-import { isFavorited, toggleFavorite } from './storage.js'
+import { buildFavoriteId, toggleFavorite, useFavorites } from './storage.js'
 import styles from './styles.js'
 
 export interface ModelReasoningEffort {
@@ -44,12 +44,11 @@ export interface ModelSelection {
 }
 
 export interface ModelDirectoryState {
-  status: 'idle' | 'loading' | 'ready' | 'error'
+  status: 'idle' | 'loading' | 'ready' | 'error' | 'selecting'
   groups: ModelGroup[]
   failures: Array<{ id: string; name: string; message: string }>
   current: ModelSelection | null
-  pending: ModelSelection | null
-  retainedEffort?: string
+  routable: boolean | null
   error: string | null
 }
 
@@ -99,6 +98,12 @@ export function PinMeSelect({
   const [menuPos, setMenuPos] = useState<CSSProperties | null>(null)
   const id = useId()
 
+  // Reactive favorites so heart buttons flip immediately on click.
+  const favorites = useFavorites()
+  const favoriteIds = useMemo(() => new Set(favorites.map(f => f.id)), [favorites])
+  const isFavorited = (provider: string, model: string, effort?: string) =>
+    favoriteIds.has(buildFavoriteId(provider, model, effort))
+
   const groups = useMemo(() => {
     return [...(state.groups || [])].sort((left, right) =>
       (left.id === 'deepseek-account' ? 0 : left.id === 'deepseek-official' ? 1 : 2) -
@@ -130,7 +135,7 @@ export function PinMeSelect({
   const effectiveEffort = state.current?.reasoningEffort ?? reasoning?.defaultEffort
 
   const effortLabel = reasoning === undefined
-    ? state.retainedEffort
+    ? undefined
     : effectiveEffort === undefined
       ? (typeof t === 'function' ? t('effort.providerDefault') : 'Default')
       : reasoning.efforts.find(level => level.id === effectiveEffort)?.name ?? effectiveEffort
@@ -149,8 +154,6 @@ export function PinMeSelect({
     ]
   }, [reasoning, t])
 
-  const busy = state.pending !== null
-
   useEffect(() => {
     if (!open) return
     const closeOutside = (event: MouseEvent): void => {
@@ -162,8 +165,8 @@ export function PinMeSelect({
     return () => { document.removeEventListener('mousedown', closeOutside) }
   }, [open])
 
-  const show = () => {
-    if (locked || busy) return
+  const openMenu = () => {
+    if (locked) return
     setPane('root')
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect()
@@ -208,9 +211,11 @@ export function PinMeSelect({
   const modelLabel = currentChoice?.model.name ??
     (state.current === null ? 'Select Model' : `${state.current.provider}/${state.current.model}`)
 
+  if (!available) return null
+
   return (
     <div className={styles.wrapper}>
-      {/* 1. Quick Switch Tags Bar (Matching Image 1) */}
+      {/* 1. Quick Switch Tags Bar (hidden until favorites exist) */}
       <FavoriteTags
         currentProvider={state.current?.provider}
         currentModel={state.current?.model}
@@ -219,7 +224,6 @@ export function PinMeSelect({
         onSelect={(selection) => {
           submit(selection)
         }}
-        onOpenMenu={show}
       />
 
       {/* 2. Primary Model Trigger */}
@@ -230,7 +234,7 @@ export function PinMeSelect({
           aria-haspopup="menu"
           aria-expanded={open}
           disabled={locked}
-          onClick={() => { open ? close() : show() }}
+          onClick={() => { open ? close() : openMenu() }}
           style={{
             display: 'inline-flex',
             alignItems: 'center',

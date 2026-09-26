@@ -7,10 +7,10 @@ import { PinMeSelect } from './PinMeSelect.js'
 
 export const name = 'pinme'
 
-export const inject = ['slots', 'modelDirectories', 'sessions']
+export const inject = ['locale', 'sessions', 'slots', 'remote', 'remote.session']
 
 export function apply(ctx: any): void {
-  ctx.inject(['slots', 'modelDirectories', 'sessions'], (scope: any) => {
+  ctx.inject(['slots', 'modelDirectories', 'locale', 'sessions', 'remote', 'remote.session'], (scope: any) => {
     const models = scope.modelDirectories
     const sessions = scope.sessions
 
