@@ -1,0 +1,37 @@
+name: release
+
+# Publishing the bundle is fully automated: a pushed `v*` tag builds the tarball
+# and creates the GitHub Release with the repository's own GITHUB_TOKEN, so no
+# personal access token is involved.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # `npm ci` also runs the package's `prepare` script, which builds lib/.
+      - run: npm ci
+
+      - run: npm pack
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          gh release create "${{ github.ref_name }}"
+          --verify-tag
+          --title "PinMe ${{ github.ref_name }}"
+          --notes-file .github/RELEASE_NOTES.md
+          dsh-plugin-pinme-*.tgz
