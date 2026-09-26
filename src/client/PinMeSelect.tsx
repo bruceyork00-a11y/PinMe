@@ -6,7 +6,7 @@
 
 import React, {
   useEffect, useId, useMemo, useRef, useState, useSyncExternalStore,
-  type CSSProperties, type KeyboardEvent, type FocusEvent,
+  type CSSProperties,
 } from 'react'
 import { createPortal } from 'react-dom'
 import { clsx } from './clsx.js'
@@ -97,7 +97,6 @@ export function PinMeSelect({
   const triggerRef = useRef<HTMLButtonElement | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
   const [menuPos, setMenuPos] = useState<CSSProperties | null>(null)
-  const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
   const id = useId()
 
   const groups = useMemo(() => {
@@ -168,11 +167,13 @@ export function PinMeSelect({
     setPane('root')
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect()
+      // Align dropdown to the right edge of the button so it stays fully inside the screen
+      const left = Math.max(10, rect.right - 260)
       setMenuPos({
         position: 'fixed',
-        left: `${rect.left}px`,
+        left: `${left}px`,
         bottom: `${window.innerHeight - rect.top + 6}px`,
-        zIndex: 9999,
+        zIndex: 99999,
       })
     }
     setOpen(true)
@@ -206,11 +207,22 @@ export function PinMeSelect({
 
   const modelLabel = currentChoice?.model.name ??
     (state.current === null ? 'Select Model' : `${state.current.provider}/${state.current.model}`)
-  const triggerLabel = effortLabel !== undefined ? `${modelLabel} · ${effortLabel}` : modelLabel
 
   return (
     <div className={styles.wrapper}>
-      {/* Primary Model Trigger */}
+      {/* 1. Quick Switch Tags Bar (Matching Image 1) */}
+      <FavoriteTags
+        currentProvider={state.current?.provider}
+        currentModel={state.current?.model}
+        currentEffort={effectiveEffort}
+        disabled={locked}
+        onSelect={(selection) => {
+          submit(selection)
+        }}
+        onOpenMenu={show}
+      />
+
+      {/* 2. Primary Model Trigger */}
       <div ref={rootRef} style={{ position: 'relative', display: 'inline-flex' }}>
         <button
           ref={triggerRef}
@@ -222,34 +234,48 @@ export function PinMeSelect({
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '6px',
+            gap: '5px',
             height: '28px',
-            padding: '0 10px',
+            padding: '0 8px',
             borderRadius: '6px',
-            border: '1px solid var(--vp-c-divider, rgba(140,140,140,0.2))',
-            background: 'var(--vp-c-bg-alt, rgba(0,0,0,0.02))',
+            border: '1px solid transparent',
+            background: open ? 'var(--vp-c-bg-mute, rgba(0,0,0,0.06))' : 'transparent',
             color: 'var(--vp-c-text-1, #1e293b)',
             fontSize: '13px',
             fontWeight: 500,
             cursor: locked ? 'not-allowed' : 'pointer',
             transition: 'all 0.15s ease',
           }}
+          onMouseEnter={(e) => {
+            if (!open) e.currentTarget.style.background = 'var(--vp-c-bg-mute, rgba(0,0,0,0.05))'
+          }}
+          onMouseLeave={(e) => {
+            if (!open) e.currentTarget.style.background = 'transparent'
+          }}
         >
-          {/* Sparkle / Model Icon */}
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
-          </svg>
           <span>{modelLabel}</span>
           {effortLabel !== undefined && (
-            <span style={{ opacity: 0.7, fontSize: '12px', fontWeight: 400 }}>{effortLabel}</span>
+            <span style={{ opacity: 0.65, fontSize: '12px', fontWeight: 400 }}>{effortLabel}</span>
           )}
           {/* Chevron Icon */}
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            style={{
+              opacity: 0.7,
+              transform: open ? 'rotate(180deg)' : 'none',
+              transition: 'transform 0.15s',
+            }}
+          >
             <polyline points="6 9 12 15 18 9"/>
           </svg>
         </button>
 
-        {/* Menu Surface Portal */}
+        {/* 3. Menu Surface Portal */}
         {open && typeof document !== 'undefined' && createPortal(
           <div
             ref={menuRef}
@@ -501,17 +527,6 @@ export function PinMeSelect({
           document.body
         )}
       </div>
-
-      {/* Favorite Tags Bar (Matching Image 1) */}
-      <FavoriteTags
-        currentProvider={state.current?.provider}
-        currentModel={state.current?.model}
-        currentEffort={effectiveEffort}
-        disabled={locked}
-        onSelect={(selection) => {
-          submit(selection)
-        }}
-      />
     </div>
   )
 }

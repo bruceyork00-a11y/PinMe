@@ -18,6 +18,7 @@ export function apply(ctx: any): void {
       scope.slots.register(
         {
           name: 'conversation.input.model',
+          priority: -100, // Lower priority shadows the built-in priority 0 component
           locale: 'model',
           inject: (sessionId: string) => {
             const directory = models.directoryFor(sessionId)
@@ -31,7 +32,7 @@ export function apply(ctx: any): void {
                 }
               },
               select: (selection: any) =>
-                available ? directory.select(selection) : Promise.resolve(undefined),
+                available ? directory.select(selection).then(() => true, () => false) : Promise.resolve(false),
             }
           },
         },
