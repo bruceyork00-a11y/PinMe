@@ -16,7 +16,9 @@
     }
   },
   "dsh": {
-    "client": "./client"
+    "client": {
+      "platform": "web"
+    }
   },
   "keywords": [
     "dsh",
