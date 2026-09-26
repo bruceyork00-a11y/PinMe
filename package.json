@@ -1,0 +1,55 @@
+{
+  "name": "dsh-plugin-pinme",
+  "version": "0.1.0",
+  "description": "PinMe: Instant favorite presets & quick switch tags for DeepSeek Harness models and reasoning effort",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/client/index.d.ts",
+      "default": "./lib/client/index.js"
+    }
+  },
+  "dsh": {
+    "client": "./client"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "model-selector",
+    "favorites",
+    "quick-switch",
+    "pinme"
+  ],
+  "author": "bruceyork00-a11y",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bruceyork00-a11y/PinMe.git"
+  },
+  "scripts": {
+    "build": "tsc && node -e \"require('fs').copyFileSync('src/client/styles.module.css', 'lib/client/styles.module.css')\"",
+    "dev": "tsc -w"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "*",
+    "@deepseek-ai/dsh-client-ui-slots": "*",
+    "@deepseek-ai/dsh-client-ui-primitives": "*",
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "typescript": "^5.7.3"
+  }
+}

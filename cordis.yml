@@ -1,0 +1,5 @@
+# Cordis configuration patch for testing PinMe locally with DSH
+# Run with: pnpm dsh web --patch ./cordis.yml
+- insert:
+    - id: pinme
+      name: 'E:/PinMe/lib/index.js'
