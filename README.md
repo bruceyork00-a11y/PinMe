@@ -51,20 +51,21 @@
 ## 🛠️ 安装
 
 PinMe 是一个标准 DSH **组合包（bundle）**，用 `dsh plugin` 装进 profile 即可，无需改 DSH 源码。
+下面的 `<profile>` 取 `web`（浏览器版）或 `desktop`（桌面版）。
 
 ### 方式一：从 npm 安装（无需构建授权，推荐）
 ```bash
-dsh plugin --profile web add dsh-plugin-pinme
+dsh plugin --profile <profile> add dsh-plugin-pinme
 ```
 包内已带编译好的 `lib/`，安装即可用。
 
 ### 方式二：从 GitHub 源码安装
 ```bash
-dsh plugin --profile web add github:bruceyork00-a11y/PinMe#v0.1.4
+dsh plugin --profile <profile> add github:bruceyork00-a11y/PinMe#v0.1.5
 ```
 pnpm ≥10 默认拒绝运行 git 依赖的构建脚本，首次会失败并在输出里给出授权键。把该键写进 profile 的 `pnpm-workspace.yaml` 后重试：
 ```yaml
-# ~/.dsh/profiles/web/pnpm-workspace.yaml
+# ~/.dsh/profiles/<profile>/pnpm-workspace.yaml
 allowBuilds:
   dsh-plugin-pinme: true
 ```
@@ -72,11 +73,24 @@ allowBuilds:
 
 ### 方式三：从 Release 产物（tarball）安装
 ```bash
-dsh plugin --profile web add ./dsh-plugin-pinme-0.1.4.tgz
+dsh plugin --profile <profile> add ./dsh-plugin-pinme-0.1.5.tgz
 ```
 tarball 已含 `lib/`，同样不需要构建授权。
 
-安装后重启 DSH 即可，插件会自动出现（无需 `--patch`）。卸载：`dsh plugin --profile web remove dsh-plugin-pinme`。
+安装后重启 DSH 即可，插件会自动出现（无需 `--patch`）。卸载：`dsh plugin --profile <profile> remove dsh-plugin-pinme`。
+
+### 桌面版（Desktop）注意
+
+桌面版使用独立的 `desktop` profile，而这个名字**保留给 Electron 持有的 profile**：npm 版 `dsh plugin --profile desktop ...` 会被直接拒绝。请改用下面任一种：
+
+```powershell
+# 桌面内置 CLI（带 manageDesktopProfile 权限，可接管 desktop profile）
+& "…\resources\runtime\cli\bin\dsh.cmd" plugin --profile desktop add dsh-plugin-pinme
+```
+
+或直接用应用内 **侧栏「插件」→ 添加插件**，填包名 / Git 地址 / 压缩包 / 本地绝对路径，装完点「立即启用」。
+
+> 想让插件卡片显示图标与本地化标题，请**按包名安装**（上面两种方式都可以）。用 `--patch E:/PinMe/cordis.yml` 这类路径挂载做本地调试时，DSH 不会读取展示元数据。
 
 ---
 
@@ -99,8 +113,8 @@ pnpm dsh web --patch E:/PinMe/cordis.yml
 ```bash
 npm run build                 # 产出 lib/（prepare 也会在 npm pack/publish 时自动执行）
 npm pack                      # 生成 dsh-plugin-pinme-<version>.tgz，可挂到 GitHub Release
-npm publish                   # 发布到 npm（需已登录）
-git tag v0.1.4 && git push origin v0.1.4   # 打 tag，供 github:owner/repo#v0.1.4 安装
+npm publish                   # 发布到 npm（需已登录，且 registry 必须是官方源）
+git tag v0.1.5 && git push origin v0.1.5   # 打 tag，供 github:owner/repo#v0.1.5 安装
 ```
 
 ---
@@ -109,9 +123,13 @@ git tag v0.1.4 && git push origin v0.1.4   # 打 tag，供 github:owner/repo#v0.
 
 ```
 PinMe/
-├── package.json               # 声明 dsh.bundle（组合包层）与 dsh.client（浏览器半边）
+├── package.json               # 声明 dsh.bundle（组合包层）、dsh.client（浏览器半边）与展示元数据
 ├── cordis.patch.yml           # 组合包层：向 profile 插入 PinMe 插件行
 ├── cordis.yml                 # 本地 --patch 调试覆盖层
+├── icon.svg                   # 插件管理器卡片图标（≤256 KiB，仅按包名安装时读取）
+├── locale/                    # 卡片本地化标题与简介（meta.title / meta.description）
+│   ├── zh.json
+│   └── en.json
 ├── build.js                   # tsc + esbuild 打包为 DSH ModuleLoader 格式
 ├── tsconfig.json              # TypeScript 编译配置
 ├── src/
